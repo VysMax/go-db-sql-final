@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -59,7 +60,8 @@ func TestAddGetDelete(t *testing.T) {
 	err = store.Delete(id)
 	require.NoError(t, err)
 	_, err = store.Get(id)
-	require.Equal(t, sql.ErrNoRows, err)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sql.ErrNoRows)
 }
 
 // TestSetAddress проверяет обновление адреса
@@ -89,7 +91,7 @@ func TestSetAddress(t *testing.T) {
 	// получите добавленную посылку и убедитесь, что адрес обновился
 	modifiedParcel, err := store.Get(id)
 	require.NoError(t, err)
-	require.Equal(t, "new test address", modifiedParcel.Address)
+	assert.Equal(t, "new test address", modifiedParcel.Address)
 }
 
 // TestSetStatus проверяет обновление статуса
@@ -118,7 +120,7 @@ func TestSetStatus(t *testing.T) {
 	// получите добавленную посылку и убедитесь, что статус обновился
 	modifiedParcel, err := store.Get(id)
 	require.NoError(t, err)
-	require.Equal(t, ParcelStatusSent, modifiedParcel.Status)
+	assert.Equal(t, ParcelStatusSent, modifiedParcel.Status)
 }
 
 // TestGetByClient проверяет получение посылок по идентификатору клиента
@@ -136,7 +138,6 @@ func TestGetByClient(t *testing.T) {
 		getTestParcel(),
 		getTestParcel(),
 	}
-	parcelMap := map[int]Parcel{}
 
 	// задаём всем посылкам один и тот же идентификатор клиента
 	client := randRange.Intn(10_000_000)
@@ -153,9 +154,6 @@ func TestGetByClient(t *testing.T) {
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
-
-		// сохраняем добавленную посылку в структуру map, чтобы её можно было легко достать по идентификатору посылки
-		parcelMap[id] = parcels[i]
 	}
 
 	// get by client
@@ -167,14 +165,5 @@ func TestGetByClient(t *testing.T) {
 	require.Equal(t, 3, len(storedParcels))
 
 	// check
-	for _, parcel := range storedParcels {
-		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
-		// убедитесь, что все посылки из storedParcels есть в parcelMap
-		// убедитесь, что значения полей полученных посылок заполнены верно
-		require.NotEmpty(t, parcelMap[parcel.Number])
-		require.Equal(t, client, parcel.Client)
-		require.Equal(t, ParcelStatusRegistered, parcel.Status)
-		require.Equal(t, "test", parcel.Address)
-		require.Equal(t, time.Now().UTC().Format(time.RFC3339), parcel.CreatedAt)
-	}
+	assert.Equal(t, parcels, storedParcels)
 }
